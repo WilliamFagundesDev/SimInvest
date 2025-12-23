@@ -49,6 +49,11 @@ const GAME_DATA = {
         { id: 'v3', name: 'Esportivo de Luxo', price: 450000, maintenance: 2500, level: 3, local: './img/Carros/Esportivo Luxo.png' }
     ],
 
+    UPGRADES: [
+        { id: 'auto_pay', name: 'Pagar conta automática', cost: 30000, description: 'Paga automaticamente as contas se houver saldo suficiente (Contas + 10%).' },
+        { id: 'auto_reinvest', name: 'Auto re-investir FII', cost: 50000, description: 'Compra 1 cota automaticamente se o dividendo recebido for >= preço da cota + 15%.' }
+    ],
+
     NEWS_TEMPLATES: [
         { 
             title: "Copom mantém Selic elevada", 

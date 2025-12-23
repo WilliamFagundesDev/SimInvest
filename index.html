@@ -10,10 +10,8 @@
 </head>
 <body class="bg-slate-950 text-slate-100 overflow-x-hidden">
 
-    <!-- Container Full Width para PC -->
     <div id="app" class="w-full min-h-screen p-2 md:p-6 lg:p-10">
-        
-        <!-- Header Dashboard Style -->
+        <!-- Header Dashboard -->
         <header class="card-glass rounded-3xl p-6 mb-8 flex flex-col lg:flex-row justify-between items-center gap-6 border border-white/10">
             <div class="flex flex-col items-center lg:items-start">
                 <h1 class="text-4xl font-black bg-gradient-to-r from-blue-400 via-indigo-400 to-emerald-400 bg-clip-text text-transparent tracking-tighter">SimInvest PRO</h1>
@@ -31,18 +29,12 @@
                 </div>
             </div>
 
-            <button id="btn-next-month" class="btn-primary px-10 py-5 text-lg">
-                FECHAR MÊS ➔
-            </button>
+            <button id="btn-next-month" class="btn-primary px-10 py-5 text-lg">FECHAR MÊS ➔</button>
         </header>
 
-        <!-- Layout de Colunas Largas -->
         <div class="flex flex-col lg:flex-row gap-8">
-            
-            <!-- Sidebar: Notícias e Perfil (30% no PC) -->
-            <aside class="w-full lg:w-[35%] space-y-8">
-                
-                <!-- Status do Jogador -->
+            <!-- Sidebar Notícias -->
+            <aside class="w-full lg:w-[30%] space-y-8">
                 <div class="card-glass p-6 rounded-3xl border border-white/5">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-sm font-black uppercase text-slate-500 tracking-widest">Carreira & Educação</h2>
@@ -50,17 +42,17 @@
                     </div>
                     <div class="grid grid-cols-1 gap-6">
                         <div class="bg-white/5 p-4 rounded-2xl">
-                            <p class="text-[10px] text-slate-500 mb-1">OCUPAÇÃO</p>
+                            <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-widest">Ocupação</p>
                             <p id="display-job" class="font-bold text-blue-300">Desempregado</p>
                         </div>
                         <div class="bg-white/5 p-4 rounded-2xl">
-                            <p class="text-[10px] text-slate-500 mb-1">QUALIFICAÇÃO</p>
+                            <p class="text-[10px] text-slate-500 mb-1 uppercase tracking-widest">Qualificação</p>
                             <p id="display-edu" class="font-bold">Ensino Fundamental</p>
                         </div>
                     </div>
                     <div id="edu-progress-wrapper" class="hidden mt-6 bg-slate-900/50 p-4 rounded-2xl">
-                        <div class="flex justify-between text-[10px] mb-2 font-bold">
-                            <span class="text-slate-400 uppercase">Progresso Acadêmico</span>
+                        <div class="flex justify-between text-[10px] mb-2 font-bold uppercase tracking-widest">
+                            <span class="text-slate-400">Progresso Acadêmico</span>
                             <span id="edu-perc" class="text-blue-400">0%</span>
                         </div>
                         <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -69,38 +61,37 @@
                     </div>
                 </div>
 
-                <!-- Notícias com Destaque -->
-                <div class="card-glass p-6 rounded-3xl border border-white/5 flex flex-col min-h-[500px]">
+                <div class="card-glass p-6 rounded-3xl border border-white/5 flex flex-col h-[600px]">
                     <h2 class="text-sm font-black uppercase text-slate-500 tracking-widest mb-6">Jornal do Mercado</h2>
-                    <div id="news-feed" class="flex-1 overflow-y-auto space-y-6 pr-2 custom-scroll">
-                        <!-- Noticias dinâmicas -->
-                    </div>
+                    <div id="news-feed" class="flex-1 overflow-y-auto space-y-6 pr-2 custom-scroll"></div>
                 </div>
             </aside>
 
-            <!-- Main Panel (65% no PC) -->
-            <main class="w-full lg:w-[65%]">
-                <div class="card-glass rounded-3xl overflow-hidden border border-white/5 flex flex-col min-h-[800px]">
-                    <nav class="flex bg-white/5 border-b border-white/5 overflow-x-auto no-scrollbar">
-                        <button data-tab="market" class="tab-btn active">💹 MERCADO</button>
-                        <button data-tab="portfolio" class="tab-btn">💼 PORTFÓLIO</button>
-                        <button data-tab="income" class="tab-btn">📈 RENDA</button>
-                        <button data-tab="career" class="tab-btn">👔 CARREIRA</button>
-                        <button data-tab="edu" class="tab-btn">🎓 ESCOLA</button>
-                        <button data-tab="bills" class="tab-btn">🧾 CONTAS</button>
-                        <button data-tab="assets" class="tab-btn">🏡 BENS</button>
+            <!-- Main Menu Panel -->
+            <main class="w-full lg:w-[70%]">
+                <div class="card-glass rounded-[40px] overflow-hidden border border-white/5 flex flex-col md:flex-row min-h-[800px]">
+                    <nav id="game-nav" class="w-full md:w-64 bg-white/[0.02] border-r border-white/5 flex flex-col p-4 gap-2">
+                        <p class="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-4 px-4">Menu Principal</p>
+                        <button data-tab="market" class="sidebar-btn active">💹 Mercado</button>
+                        <button data-tab="portfolio" class="sidebar-btn">💼 Portfólio</button>
+                        <button data-tab="income" class="sidebar-btn">📈 Renda</button>
+                        <button data-tab="career" class="sidebar-btn">👔 Carreira</button>
+                        <button data-tab="edu" id="nav-edu" class="sidebar-btn">🎓 Escola</button>
+                        <button data-tab="bills" class="sidebar-btn">🧾 Contas</button>
+                        
+                        <p class="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mt-8 mb-4 px-4">Objetivos & Upgrades</p>
+                        <button data-tab="assets" id="nav-assets" class="sidebar-btn">🏡 Bens Físicos</button>
+                        <button data-tab="upgrades" id="nav-upgrades" class="sidebar-btn">⚡ Upgrades</button>
                     </nav>
 
-                    <div id="tab-content" class="p-8 flex-1">
-                        <!-- Conteúdo da Aba -->
-                    </div>
+                    <div id="tab-content" class="flex-1 p-8 md:p-12 overflow-y-auto custom-scroll h-full max-h-[900px]"></div>
                 </div>
             </main>
         </div>
     </div>
 
     <!-- Modais -->
-    <div id="modal-overlay" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[500] flex items-center justify-center p-4">
         <div class="card-glass max-w-lg w-full p-10 rounded-[40px] border border-white/10 text-center shadow-2xl">
             <h3 id="modal-title" class="text-3xl font-black mb-4"></h3>
             <p id="modal-body" class="text-slate-400 mb-10 leading-relaxed text-lg"></p>
@@ -108,10 +99,23 @@
         </div>
     </div>
 
+    <!-- Carregamento de Scripts -->
     <script src="data.js"></script>
     <script src="storage.js"></script>
     <script src="market.js"></script>
     <script src="game.js"></script>
+    
+    <!-- Scripts das Abas (Pasta Menu) -->
+    <script src="Menu/marketTab.js"></script>
+    <script src="Menu/portfolioTab.js"></script>
+    <script src="Menu/incomeTab.js"></script>
+    <script src="Menu/careerTab.js"></script>
+    <script src="Menu/educationTab.js"></script>
+    <script src="Menu/billsTab.js"></script>
+    <script src="Menu/assetsTab.js"></script>
+    <script src="Menu/upgradesTab.js"></script>
+
+    <!-- UI Core -->
     <script src="ui.js"></script>
     <script src="main.js"></script>
 </body>

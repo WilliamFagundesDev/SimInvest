@@ -1,6 +1,6 @@
 /**
  * GAME.JS
- * Responsabilidade: Gerir o estado e as regras de negócio (SOLID - SRP).
+ * Responsabilidade: Gerir o estado e as regras de negócio.
  */
 
 class GameController {
@@ -22,7 +22,8 @@ class GameController {
             ownedAssets: { house: null, vehicle: null },
             pendingBills: [], 
             incomeHistory: [], 
-            newsHistory: []
+            newsHistory: [],
+            upgrades: [] 
         };
     }
 
@@ -32,19 +33,40 @@ class GameController {
             this.state = saved;
             if (!this.state.pendingBills) this.state.pendingBills = [];
             if (!this.state.incomeHistory) this.state.incomeHistory = [];
-            // Garantir que rastreamos o capital investido para lucro/prejuízo
+            if (!this.state.upgrades) this.state.upgrades = [];
             this.state.portfolio.forEach(p => {
                 if (p.principal === undefined) p.principal = p.avgPrice * (p.qty || 1);
             });
         }
     }
 
-    // Consolida dívidas: Se já existe uma conta com esse nome, soma o valor e aumenta os juros
+    calculateEquity() {
+        let equity = this.state.balance;
+        this.state.portfolio.forEach(p => {
+            const asset = this.market.assets.find(a => a.id === p.id);
+            equity += asset.price ? asset.price * p.qty : p.avgPrice;
+        });
+        return equity;
+    }
+
+    // Gerencia a candidatura a um novo emprego com salvamento automático
+    applyForJob(jobId) {
+        const job = GAME_DATA.JOBS.find(j => j.id === jobId);
+        const canEdu = this.state.degrees.includes(job.req);
+        const canExp = this.state.experience >= job.exp;
+
+        if (canEdu && canExp) {
+            this.state.jobId = jobId;
+            this.storage.save(this.state);
+            return { success: true };
+        }
+        return { success: false, reason: !canEdu ? `Requer ${job.req}` : `Requer ${job.exp} meses de experiência` };
+    }
+
     addOrUpdateBill(name, amount) {
         let bill = this.state.pendingBills.find(b => b.name === name);
         if (bill) {
             bill.baseAmount += amount;
-            // O juro já foi aumentado no início do nextMonth, não aumentamos aqui para evitar duplicidade
             bill.amount = bill.baseAmount * (1 + (bill.interest / 100));
         } else {
             this.state.pendingBills.push({
@@ -60,14 +82,12 @@ class GameController {
         let monthlyDividends = 0;
         let dividendsDetails = [];
 
-        // 1. Aumentar juros apenas das contas que JÁ ESTAVAM lá antes de rodar o mês
         for (let bill of this.state.pendingBills) {
             bill.interest += 5;
             bill.amount = bill.baseAmount * (1 + (bill.interest / 100));
             if (bill.interest >= 100) return "GAME_OVER";
         }
 
-        // 2. Adicionar os novos gastos do mês às contas (Consolidado)
         GAME_DATA.FIXED_BILLS.forEach(b => this.addOrUpdateBill(b.name, b.cost));
 
         if (this.state.currentEducation) {
@@ -89,14 +109,12 @@ class GameController {
             this.addOrUpdateBill(`Manutenção: ${v.name}`, v.maintenance);
         }
 
-        // 3. Processar Renda (Salário)
         if (this.state.jobId) {
             const job = GAME_DATA.JOBS.find(j => j.id === this.state.jobId);
             this.state.balance += job.salary;
             this.state.experience++;
         }
 
-        // 4. Processar Mercado e Dividendos
         this.market.updateMarketCycle();
         const news = this.market.generateNews();
         this.state.newsHistory.unshift({ ...news, month: this.state.month });
@@ -109,7 +127,6 @@ class GameController {
                 const yieldRate = this.market.calculateYield(pos.id);
                 pos.avgPrice *= (1 + yieldRate);
             } else {
-                // Lógica de Periodicidade
                 let paysThisMonth = false;
                 if (!asset.periodicity || asset.periodicity === 'mensal') paysThisMonth = true;
                 else if (asset.periodicity === 'semestral' && this.state.month % 6 === 0) paysThisMonth = true;
@@ -122,12 +139,26 @@ class GameController {
                         this.state.balance += totalDiv;
                         monthlyDividends += totalDiv;
                         dividendsDetails.push({ name: asset.name, amount: totalDiv, qty: pos.qty });
+
+                        if (this.state.upgrades.includes('auto_reinvest') && asset.type === 'FII') {
+                            const costWithMargin = asset.price * 1.15;
+                            if (totalDiv >= costWithMargin) {
+                                this.buyAsset(asset.id, 1);
+                            }
+                        }
                     }
                 }
             }
         });
 
-        // 5. Histórico (Últimos 12 meses)
+        if (this.state.upgrades.includes('auto_pay')) {
+            const totalToPay = this.state.pendingBills.reduce((acc, b) => acc + b.amount, 0);
+            if (this.state.balance >= (totalToPay * 1.1)) {
+                this.state.balance -= totalToPay;
+                this.state.pendingBills = [];
+            }
+        }
+
         this.state.incomeHistory.push({
             month: this.state.month,
             total: monthlyDividends,
@@ -214,6 +245,17 @@ class GameController {
         if (this.state.balance >= item.price) {
             this.state.balance -= item.price;
             this.state.ownedAssets[type] = itemId;
+            this.storage.save(this.state);
+            return true;
+        }
+        return false;
+    }
+
+    buyUpgrade(upgradeId) {
+        const upgrade = GAME_DATA.UPGRADES.find(u => u.id === upgradeId);
+        if (upgrade && !this.state.upgrades.includes(upgradeId) && this.state.balance >= upgrade.cost) {
+            this.state.balance -= upgrade.cost;
+            this.state.upgrades.push(upgradeId);
             this.storage.save(this.state);
             return true;
         }
