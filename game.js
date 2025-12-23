@@ -49,7 +49,6 @@ class GameController {
         return equity;
     }
 
-    // Gerencia a candidatura a um novo emprego com salvamento automático
     applyForJob(jobId) {
         const job = GAME_DATA.JOBS.find(j => j.id === jobId);
         const canEdu = this.state.degrees.includes(job.req);
@@ -64,7 +63,7 @@ class GameController {
     }
 
     addOrUpdateBill(name, amount) {
-        let bill = this.state.pendingBills.find(b => b.name === name);
+        let bill = this.state.pendingBills.find(b => b.name === name && b.status !== 'paid');
         if (bill) {
             bill.baseAmount += amount;
             bill.amount = bill.baseAmount * (1 + (bill.interest / 100));
@@ -73,7 +72,8 @@ class GameController {
                 name: name,
                 baseAmount: amount,
                 amount: amount,
-                interest: 0
+                interest: 0,
+                status: 'pending'
             });
         }
     }
@@ -81,6 +81,8 @@ class GameController {
     nextMonth() {
         let monthlyDividends = 0;
         let dividendsDetails = [];
+
+        this.state.pendingBills = this.state.pendingBills.filter(b => b.status !== 'paid');
 
         for (let bill of this.state.pendingBills) {
             bill.interest += 5;
@@ -138,24 +140,49 @@ class GameController {
                     if (totalDiv > 0) {
                         this.state.balance += totalDiv;
                         monthlyDividends += totalDiv;
-                        dividendsDetails.push({ name: asset.name, amount: totalDiv, qty: pos.qty });
+                        
+                        let reinvestmentInfo = null;
 
+                        // LÓGICA AUTO RE-INVESTIR FII (Compra Máxima com 20% de reserva)
                         if (this.state.upgrades.includes('auto_reinvest') && asset.type === 'FII') {
-                            const costWithMargin = asset.price * 1.15;
-                            if (totalDiv >= costWithMargin) {
-                                this.buyAsset(asset.id, 1);
+                            const triggerPrice = asset.price * 1.20; // 1 cota + 20% margem
+                            
+                            if (totalDiv >= triggerPrice) {
+                                // Compra o máximo possível usando até 80% do dividendo recebido
+                                const budget = totalDiv * 0.80;
+                                const qtyToBuy = Math.floor(budget / asset.price);
+
+                                if (qtyToBuy > 0) {
+                                    const actualCost = asset.price * qtyToBuy;
+                                    if (this.buyAsset(asset.id, qtyToBuy)) {
+                                        reinvestmentInfo = { 
+                                            qty: qtyToBuy, 
+                                            cost: actualCost,
+                                            leftover: totalDiv - actualCost // Salva o valor exato que sobrou
+                                        };
+                                    }
+                                }
                             }
                         }
+
+                        dividendsDetails.push({ 
+                            name: asset.name, 
+                            amount: totalDiv, 
+                            qty: pos.qty,
+                            reinvested: reinvestmentInfo
+                        });
                     }
                 }
             }
         });
 
         if (this.state.upgrades.includes('auto_pay')) {
-            const totalToPay = this.state.pendingBills.reduce((acc, b) => acc + b.amount, 0);
+            const toPay = this.state.pendingBills.filter(b => b.status === 'pending');
+            const totalToPay = toPay.reduce((acc, b) => acc + b.amount, 0);
+            
             if (this.state.balance >= (totalToPay * 1.1)) {
                 this.state.balance -= totalToPay;
-                this.state.pendingBills = [];
+                toPay.forEach(b => b.status = 'paid');
             }
         }
 
@@ -176,7 +203,7 @@ class GameController {
         const bill = this.state.pendingBills[idx];
         if (bill && this.state.balance >= bill.amount) {
             this.state.balance -= bill.amount;
-            this.state.pendingBills.splice(idx, 1);
+            bill.status = 'paid';
             this.storage.save(this.state);
             return true;
         }
