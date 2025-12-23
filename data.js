@@ -5,10 +5,10 @@
 
 const GAME_DATA = {
     JOBS: [
-        { id: 'j1', name: 'Entregador de Aplicativo', salary: 1600, req: 'Fundamental', exp: 0 },
+        { id: 'j1', name: 'Entregador de Aplicativo', salary: 1600, req: 'Fundamental', exp: 0, vehicleReq: 'v0' },
         { id: 'j2', name: 'Repositor de Estoque', salary: 2100, req: 'Ensino Médio', exp: 0 },
         { id: 'j3', name: 'Assistente Administrativo', salary: 2800, req: 'Ensino Médio', exp: 6 },
-        { id: 'j4', name: 'Analista Financeiro Jr', salary: 4500, req: 'Superior', exp: 0 },
+        { id: 'j4', name: 'Analista Financeiro Jr', salary: 4500, req: 'Superior', exp: 0, eduReq: 'Graduação em Economia' },
         { id: 'j5', name: 'Gerente Comercial', salary: 8200, req: 'Superior', exp: 24 },
         { id: 'j6', name: 'CFO (Diretor Financeiro)', salary: 22000, req: 'MBA', exp: 60 }
     ],
@@ -22,7 +22,7 @@ const GAME_DATA = {
 
     MARKET: [
         { id: 'selic', name: 'Tesouro Selic', type: 'Tesouro', sector: 'Governo', baseYield: 0.009, volatility: 0.001 },
-        { id: 'cdb_pos', name: 'CDB 100% CDI', type: 'CDB', sector: 'Bancário', baseYield: 0.0085, volatility: 0.002 },
+        { id: 'cdb_pos', name: 'CDB 100% CDI', type: 'CDB', sector: 'Bancos', baseYield: 0.0085, volatility: 0.002 },
         { id: 'lca_agro', name: 'LCA Agronegócio', type: 'LCI/LCA', sector: 'Agronegócio', baseYield: 0.0078, volatility: 0.001 },
         { id: 'bcff11', name: 'BCFF11', type: 'FII', sector: 'Fundos de Fundos', price: 9.20, baseDividend: 0.07, baseYield: 0.008, volatility: 0.02, periodicity: 'mensal' },
         { id: 'hglg11', name: 'HGLG11', type: 'FII', sector: 'Logística', price: 165.00, baseDividend: 1.10, baseYield: 0.007, volatility: 0.015, periodicity: 'mensal' },
@@ -44,14 +44,16 @@ const GAME_DATA = {
     ],
 
     VEHICLES: [
+        { id: 'v0', name: 'Bicicleta Simples', price: 600, maintenance: 20, level: 0, local: './img/Carros/Bicicleta.png' },
         { id: 'v1', name: 'Carro Usado', price: 35000, maintenance: 300, level: 1, local: './img/Carros/Carro Usado.png' },
         { id: 'v2', name: 'Sedan Zero KM', price: 120000, maintenance: 800, level: 2, local: './img/Carros/Sedan Zero.png' },
-        { id: 'v3', name: 'Esportivo de Luxo', price: 450000, maintenance: 2500, level: 3, local: './img/Carros/Esportivo Luxo.png' }
+        { id: 'v3', name: 'Esportivo de Luxo', price: 450000, maintenance: 2500, level: 3, local: './img/Carros/Esportivo Luxo.png' },
+        { id: 'v4', name: 'Super Carro', price: 1000000, maintenance: 10000, level: 4, local: './img/Carros/Super Carro.png' }
     ],
 
     UPGRADES: [
         { id: 'auto_pay', name: 'Pagar conta automática', cost: 30000, description: 'Paga automaticamente as contas se houver saldo suficiente (Contas + 10%).' },
-        { id: 'auto_reinvest', name: 'Auto re-investir FII', cost: 50000, description: 'Compra 1 cota automaticamente se o dividendo recebido for >= preço da cota + 15%.' }
+        { id: 'auto_reinvest', name: 'Auto re-investir Ativos', cost: 50000, description: 'Compra cotas automaticamente de FIIs e Ações se o dividendo recebido for >= preço da cota + 20%.' }
     ],
 
     NEWS_TEMPLATES: [
