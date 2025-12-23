@@ -1,6 +1,6 @@
 /**
  * Aba de Aluguéis
- * Corrigido: Multiplicador de rendimento ajustado para 0,5% (0.005).
+ * Atualizado: Sincronização garantida com o motor do jogo.
  */
 class RentalsTab {
     constructor(ui) { this.ui = ui; }
@@ -18,7 +18,6 @@ class RentalsTab {
 
         const listHtml = state.ownedAssets.houses.map((house, index) => {
             const data = GAME_DATA.PROPERTIES.find(p => p.id === house.id);
-            // FIX: Valor calculado com 0,5%
             const rentValue = data.price * 0.005;
             
             return `
@@ -60,21 +59,36 @@ class RentalsTab {
 
         container.innerHTML = `
             <div class="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-                <header class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/5 pb-8">
-                    <div>
+                <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-8">
+                    <div class="flex-1">
                         <h2 class="text-3xl font-black text-white tracking-tighter">Gestão de Aluguéis</h2>
                         <p class="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Rentabilize seu patrimônio imobiliário</p>
                     </div>
-                    <div class="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl text-right">
-                        <span class="text-[10px] font-black uppercase block text-emerald-500">Yield Meta</span>
-                        <span class="text-2xl font-mono font-bold text-emerald-400">0.50% / mês</span>
+                    <div class="flex items-center gap-4">
+                        <button onclick="ui.tabs.rentals.rentAll()" class="px-6 py-4 bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 rounded-2xl text-[10px] font-black uppercase hover:bg-emerald-600 hover:text-white transition-all">
+                            ALUGAR TODOS
+                        </button>
+                        <div class="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl text-right">
+                            <span class="text-[10px] font-black uppercase block text-emerald-500">Yield Meta</span>
+                            <span class="text-2xl font-mono font-bold text-emerald-400">0.50% / mês</span>
+                        </div>
                     </div>
                 </header>
-                <div class="grid grid-cols-1 gap-6">${listHtml}</div>
+                <div class="grid grid-cols-1 gap-6 pb-20">${listHtml}</div>
             </div>`;
     }
 
     toggle(index) {
         if (this.ui.game.toggleRental(index)) this.ui.render();
+    }
+
+    rentAll() {
+        // Agora o método rentAllHouses existe no motor do jogo
+        if (this.ui.game.rentAllHouses()) {
+            this.ui.render();
+            this.ui.showModal("Gestão Ativada", "Todos os imóveis vagos foram colocados para alugar!");
+        } else {
+            this.ui.showModal("Aviso", "Todos os seus imóveis já estão sendo alugados.");
+        }
     }
 }

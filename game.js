@@ -1,7 +1,7 @@
 /**
  * GAME.JS
- * Responsabilidade: Gerir o estado global, a progressão mensal e todas as regras de negócio.
- * FIX CRÍTICO: Multiplicador de aluguel corrigido para 0,005 (0,5%) na lógica de processamento.
+ * Responsabilidade: Gerir o estado global e todas as regras de negócio.
+ * Corrigido: Agrupamento de rendas de aluguéis e cobrança de manutenção em imóveis desocupados.
  */
 
 class GameController {
@@ -14,7 +14,7 @@ class GameController {
     getInitialState() {
         return {
             month: 1,
-            balance: 5000,
+            balance: 5000000,
             jobId: null,
             experience: 0,        
             currentJobExperience: 0, 
@@ -36,6 +36,7 @@ class GameController {
         const saved = await this.storage.load();
         if (saved) {
             this.state = saved;
+            // Migrações e garantias de estado
             if (this.state.currentJobExperience === undefined) this.state.currentJobExperience = 0;
             if (!this.state.upgrades) this.state.upgrades = [];
             if (!this.state.pendingBills) this.state.pendingBills = [];
@@ -76,6 +77,7 @@ class GameController {
     applyForJob(jobId) {
         const job = GAME_DATA.JOBS.find(j => j.id === jobId);
         if (!job) return { success: false, reason: "Emprego não encontrado." };
+        
         const hasEdu = this.state.degrees.includes(job.req);
         const hasSpecificEdu = !job.eduReq || this.state.degrees.includes(job.eduReq);
         const hasVehicle = !job.vehicleReq || this.state.ownedAssets.vehicles.includes(job.vehicleReq);
@@ -104,6 +106,7 @@ class GameController {
         let monthlyTotalIncome = 0;
         let incomeDetails = [];
 
+        // 1. Juros de contas atrasadas
         this.state.pendingBills = this.state.pendingBills.filter(b => b.status !== 'paid');
         for (let bill of this.state.pendingBills) {
             bill.interest += 5;
@@ -111,6 +114,7 @@ class GameController {
             if (bill.interest >= 100) return "GAME_OVER";
         }
 
+        // 2. Novas contas
         GAME_DATA.FIXED_BILLS.forEach(b => this.addOrUpdateBill(b.name, b.cost));
 
         if (this.state.currentEducation) {
@@ -124,73 +128,87 @@ class GameController {
             }
         }
 
-        // LÓGICA DE ALUGUÉIS (CORRIGIDA)
+        // 3. Imóveis e Aluguéis (Ajustado para 0,5% e Agrupado)
+        const aggregatedRentals = {};
+
         this.state.ownedAssets.houses.forEach(house => {
             const data = GAME_DATA.PROPERTIES.find(p => p.id === house.id);
             if (!data) return;
-            if (house.isRented) {
-                if (house.vacancyRemaining > 0) {
-                    house.vacancyRemaining--;
-                    if (house.vacancyRemaining === 0) {
-                        this.state.newsHistory.unshift({
-                            title: "Novo Inquilino!",
-                            description: `O seu imóvel "${data.name}" foi ocupado. O aluguel voltará a ser creditado.`,
-                            target: 'Imobiliário', impact: 0, type: 'pos', local: data.local, month: this.state.month
-                        });
-                    }
-                    this.addOrUpdateBill(`Manutenção (Vago): ${data.name}`, data.maintenance);
-                } else {
-                    // FIX: Multiplicador de 0.5% (0.005) - Antes estava 0.08
-                    const rentAmount = data.price * 0.005;
-                    this.state.balance += rentAmount;
-                    monthlyTotalIncome += rentAmount;
-                    incomeDetails.push({ name: `Aluguel: ${data.name}`, amount: rentAmount, type: 'rental' });
-                    
-                    if (Math.random() < 0.10) {
-                        house.vacancyRemaining = Math.floor(Math.random() * 6) + 1;
-                        this.state.newsHistory.unshift({
-                            title: "Imóvel Desocupado",
-                            description: `O inquilino de "${data.name}" saiu. O imóvel ficará vago por aprox. ${house.vacancyRemaining} meses.`,
-                            target: 'Imobiliário', impact: 0, type: 'neg', local: data.local, month: this.state.month
-                        });
-                    }
+
+            // Lógica: Se está alugado mas vago, OU se não está para alugar -> PAGA MANUTENÇÃO
+            const isActuallyOccupied = house.isRented && house.vacancyRemaining === 0;
+
+            if (house.isRented && house.vacancyRemaining > 0) {
+                house.vacancyRemaining--;
+                if (house.vacancyRemaining === 0) {
+                    this.state.newsHistory.unshift({
+                        title: "Novo Inquilino!",
+                        description: `O seu imóvel "${data.name}" foi ocupado. O aluguel voltará a ser creditado.`,
+                        target: 'Imobiliário', impact: 0, type: 'pos', local: data.local, month: this.state.month
+                    });
                 }
-            } else {
+            }
+
+            if (!isActuallyOccupied) {
+                // Cobra manutenção se o imóvel estiver desocupado
                 this.addOrUpdateBill(`Manutenção: ${data.name}`, data.maintenance);
+            } else {
+                // Recebe aluguel se estiver ocupado
+                const rentAmount = data.price * 0.005;
+                this.state.balance += rentAmount;
+                monthlyTotalIncome += rentAmount;
+
+                // Agrupamento para o histórico de renda
+                if (!aggregatedRentals[house.id]) {
+                    aggregatedRentals[house.id] = { name: data.name, amount: 0, count: 0 };
+                }
+                aggregatedRentals[house.id].amount += rentAmount;
+                aggregatedRentals[house.id].count++;
+                
+                // Chance de desocupação (3%)
+                if (Math.random() < 0.005) {
+                    house.vacancyRemaining = Math.floor(Math.random() * 36) + 1;
+                    this.state.newsHistory.unshift({
+                        title: "Imóvel Desocupado",
+                        description: `O inquilino de "${data.name}" saiu. O imóvel ficará vago por aprox. ${house.vacancyRemaining} meses.`,
+                        target: 'Imobiliário', impact: 0, type: 'neg', local: data.local, month: this.state.month
+                    });
+                }
             }
         });
 
+        // Adicionar rendas agrupadas ao histórico
+        Object.values(aggregatedRentals).forEach(r => {
+            const displayName = r.count > 1 ? `Aluguel: ${r.name} (${r.count}x)` : `Aluguel: ${r.name}`;
+            incomeDetails.push({ name: displayName, amount: r.amount, type: 'rental' });
+        });
+
+        // 4. Veículos
         this.state.ownedAssets.vehicles.forEach(vId => {
             const v = GAME_DATA.VEHICLES.find(p => p.id === vId);
             if (v && v.maintenance > 0) this.addOrUpdateBill(`Manutenção: ${v.name}`, v.maintenance);
         });
 
+        // 5. Salário e Bônus
         if (this.state.jobId) {
             const job = GAME_DATA.JOBS.find(j => j.id === this.state.jobId);
             const bonusPercent = this.calculateSalaryBonus();
-            
             if (this.state.currentJobExperience > 0 && this.state.currentJobExperience % 12 === 0 && bonusPercent < 1.0) {
                 this.state.newsHistory.unshift({
                     title: "Aumento Salarial!",
-                    description: `Parabéns! Pela sua fidelidade de ${Math.floor(this.state.currentJobExperience/12)} ano(s) no cargo de ${job.name}, você recebeu 10% de aumento!`,
+                    description: `Parabéns! Pela sua fidelidade de ${Math.floor(this.state.currentJobExperience/12)} ano(s) em ${job.name}, você recebeu 10% de aumento!`,
                     target: 'Carreira', impact: 0.1, type: 'pos', local: '/img/Noticias/aumentoSalarial.png', month: this.state.month
                 });
             }
-
             const finalSalary = job.salary * (1 + bonusPercent);
             this.state.balance += finalSalary;
             monthlyTotalIncome += finalSalary;
-            
-            incomeDetails.push({ 
-                name: `Salário: ${job.name}`, 
-                amount: finalSalary, 
-                type: 'salary', 
-                bonus: bonusPercent > 0 ? `${(bonusPercent * 100).toFixed(0)}%` : null 
-            });
+            incomeDetails.push({ name: `Salário: ${job.name}`, amount: finalSalary, type: 'salary', bonus: bonusPercent > 0 ? `${(bonusPercent * 100).toFixed(0)}%` : null });
             this.state.experience++; 
             this.state.currentJobExperience++; 
         }
 
+        // 6. Mercado e Investimentos
         this.market.updateMarketCycle();
         const marketNews = this.market.generateNews();
         this.state.newsHistory.unshift({ ...marketNews, month: this.state.month });
@@ -224,7 +242,9 @@ class GameController {
                                 if (qtyToBuy > 0) {
                                     const cost = asset.price * qtyToBuy;
                                     this.state.balance -= cost;
+                                    const totalInvested = (pos.qty * pos.avgPrice) + cost;
                                     pos.qty += qtyToBuy;
+                                    pos.avgPrice = totalInvested / pos.qty;
                                     pos.principal += cost;
                                     reinvestmentInfo = { qty: qtyToBuy, cost: cost, leftover: totalDiv - cost };
                                 }
@@ -236,7 +256,8 @@ class GameController {
             }
         });
 
-        if (this.state.upgrades && this.state.upgrades.includes('auto_pay')) {
+        // 7. Pagamento Automático
+        if (this.state.upgrades.includes('auto_pay')) {
             const pending = this.state.pendingBills.filter(b => b.status === 'pending');
             const totalToPay = pending.reduce((acc, b) => acc + b.amount, 0);
             if (totalToPay > 0 && this.state.balance >= totalToPay) {
@@ -244,7 +265,7 @@ class GameController {
                 pending.forEach(b => b.status = 'paid');
                 this.state.newsHistory.unshift({
                     title: "Assistente Financeiro",
-                    description: `Suas contas do mês totalizando R$ ${totalToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} foram pagas automaticamente.`,
+                    description: `Suas contas totalizando R$ ${totalToPay.toLocaleString('pt-BR')} foram pagas automaticamente.`,
                     target: 'Financeiro', impact: 0, type: 'pos', local: '/img/Noticias/ContasPagas.png', month: this.state.month
                 });
             }
@@ -256,6 +277,22 @@ class GameController {
         this.state.month++;
         this.storage.save(this.state);
         return null;
+    }
+
+    rentAllHouses() {
+        let changed = false;
+        this.state.ownedAssets.houses.forEach(house => {
+            if (!house.isRented) {
+                house.isRented = true;
+                house.vacancyRemaining = 0;
+                changed = true;
+            }
+        });
+        if (changed) {
+            this.storage.save(this.state);
+            return true;
+        }
+        return false;
     }
 
     buyUpgrade(upgradeId) {
